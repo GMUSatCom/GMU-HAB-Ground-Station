@@ -1,0 +1,19 @@
+Instructions
+
+In this repo, I have included my c# source classes, executable demo program and the arduino sketch this was built around
+
+if you want to play with it right away,
+I expect you alreay know how to load arduino sketch files to your arduino boards
+
+1) Load the sketch in the arduino IDE and flash it to your arduino device. (tested on mega, uno, and due **(does not work on the due properly)**)
+2) Your arduino must be connected to your pc
+3) Since you flashed your device already you should remember the COM port the arduino is connected on for the program
+
+4) Launch the executable
+5) Type the number next to the com port that your arduino is listening on
+6) Type the number next to the baud rate of 9600 for this demo
+7) You will see a list of commands to demo.
+
+These commands are defined in the firmware and invoked in the program. You will see in my source files how this all works
+
+enjoy!! - VN
