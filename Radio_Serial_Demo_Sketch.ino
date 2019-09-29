@@ -152,12 +152,17 @@ void flashLed()
 {
   //flash the onboard led for 300ms with 500ms delay 5 times when called
   int c=0;
+  int saved_state = pin_status[13];
   while(c<5)
   {
   analogWrite(13,255);
+  pin_status[13]=255;
   delay(300);
   analogWrite(13,0);
+  pin_status[13]=0;
   delay(500);
   c++; // ;)~
   }
+  pin_status[13] = saved_state;
+  analogWrite(13,saved_state);
 }
