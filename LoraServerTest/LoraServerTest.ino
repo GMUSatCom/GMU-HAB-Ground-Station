@@ -298,8 +298,6 @@ void serialEvent()
     details[i] = Serial.read();
     i++;
   }
-  Serial.println("poopy");
-
   commandHandler(instruction, details);
 
 }
