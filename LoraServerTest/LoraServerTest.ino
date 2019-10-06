@@ -1,6 +1,12 @@
 #include <SPI.h>              // include libraries spi and LoRa From Sandeepmisty
 #include <LoRa.h>
 
+/*
+   Vaughn Nugent
+   Gmu Sat Com Hab Ground Station working sketch for testing LoRa Radio 
+   Using LoRa libraries from Sandeep Mistry for Arduino
+*/
+
 /*  This needs to go into the serial buffer files otherwise the buffer size wont be increased 
  
 #define SERIAL_TX_BUFFER_SIZE 260 // Increase hardware serial buffers to 256 bytes.
