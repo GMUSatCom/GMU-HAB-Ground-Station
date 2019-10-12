@@ -6,16 +6,7 @@
  */ 
 
 
-#include "sam.h"
-#include "arduino.h"
-#include "HardwareSerial.h"
-#include "LoRa.h"
-
-#define RADIOPACKETSIZE 252
-#define SERIALPACKETSIZE 260
-#define BAUDRATE 9600
-
-const byte HARDWAREID = 0x00;
+#include "LoRaService.h"
 
 const byte *ERRCODES[6] = {
   0x00,
@@ -39,8 +30,7 @@ const byte *HEADERCODES[6]
   0x03,
   0x04,
   0x05,
-  0x06
-  
+  0x06  
   };
 
 
@@ -74,14 +64,23 @@ int main(void)
     /* Initialize the SAM system */
    SystemInit();
    Serial.begin(BAUDRATE);
+   while(!Serial);
+      
+   if(initLora()==-1)
+   {
+    sendSerial('1','0');
+   } 
 
-    /* Replace with your application code */
-    while (1) 
+    while(1)
     {
-    onReceive(LoRa.parsePacket()); // submit callback function
-    
+       onReceive(LoRa.parsePacket()); // submit callback function
     }
 }
+
+
+/*************************************************************/
+/*                    RADIO SECTION                          */
+/*************************************************************/
 
 
 void setHwPins(int enable_pin, int reset_pin, int interrupt_pin )
@@ -198,7 +197,7 @@ int sendSerial(byte header1, byte header2, byte * message)
   if(sizeof(message)>= (SERIALPACKETSIZE - msg_start) || sizeof(message) < 1)
   {
     //message is too large to send in a serial packet
-    //free(serial_packet);
+    free(serial_packet);
     return -1;
   }
   for(int loc=0; loc<sizeof(message); loc++)
@@ -208,7 +207,7 @@ int sendSerial(byte header1, byte header2, byte * message)
 
   int sent = Serial.write(serial_packet, sizeof(serial_packet));//send serial packet
 
-  //free(serial_packet); // free packet now its sent
+  free(serial_packet); // free packet now its sent
 
   return sent;
   
@@ -224,14 +223,15 @@ int sendSerial(byte header1, byte header2)
   serial_packet[msg_start++] = header2;
 
   int sent = Serial.write(serial_packet, sizeof(serial_packet));//send serial packet
-  
+
+  free(serial_packet);
   return sent;
   
 }
 
 /*************** Recived Serial **************************/
 void serialEvent()
-{
+{       
   byte device_id = Serial.read();
   word instruction = {Serial.read() << 8 | Serial.read()};
 
