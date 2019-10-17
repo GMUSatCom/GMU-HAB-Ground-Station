@@ -1,24 +1,19 @@
-﻿/*Begining of Auto generated code by Atmel studio */
-#include <Arduino.h>
-
-/*End of auto generated code by Atmel studio */
-
+﻿
 /*
  * RadioServer.cpp
  *
  * Created: 10/10/2019 6:24:09 PM
  * Author : Vaughn Nugent 
+ * Base sketch to operate the service lib 
  */ 
 
 #include "LoRaService.h"
-
-char mess[8] = {"Message"};
 
 void setup(){
 	
 	pinMode(13, OUTPUT);
 	
-	Serial.begin(BAUDRATE);
+	Serial.begin(9600);
 	while(!Serial);
 	
 	
