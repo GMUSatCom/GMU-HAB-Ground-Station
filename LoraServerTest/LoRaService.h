@@ -9,35 +9,34 @@
 #ifndef LORASERVICE_H_
 #define LORASERVICE_H_
 
-#include "sam.h"
-#include "arduino.h"
-#include "HardwareSerial.h"
+//#include "sam.h"
+#include "Arduino.h"
 #include "LoRa.h"
 
-const unsigned int RADIOPACKETSIZE = 252;
-const unsigned int  SERIALPACKETSIZE = 260;
-const unsigned int  BAUDRATE = 9600;
+const int RADIOPACKETSIZE = 252;
+const int SERIALPACKETSIZE = 260;
+const int BAUDRATE = 9600;
 
-const byte HARDWAREID = 0x00;
+const char HARDWAREID = 0x00;
 
-int initLora();
+int initRadio();
+
+void setDestId(byte id);
 
 void setHwPins(int enable_pin, int reset_pin, int interrupt_pin );
 
 void setHwPins(int enable_pin, int reset_pin, int interrupt_pin );
 
-int sendLoraPacket(byte * message);
+int sendLoraPacket(char* data, int data_size);
 
 void onReceive(int packetSize);
 
-int sendSerial(byte header1, byte header2, byte * message);
+int sendSerial(char header1, char header2, char* data, int data_size);
 
-int sendSerial(byte header1, byte header2);
+int sendSerial(char header1, char header2);
 
-void serialEvent();
+void serialEventHandler();
 
-void commandHandler(word instruction, byte * details);
-
-
+void commandHandler(byte instruction, char* data, int data_size);
 
 #endif /* LORASERVICE_H_ */
