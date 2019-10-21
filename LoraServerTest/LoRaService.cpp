@@ -167,8 +167,7 @@ bool LoRaServiceClass::sendLoraPacket(char* data, int data_size)
   }
   
   if(LoRa.endPacket()==0)
-  {     
-    sendSerial(WARNING, lora_send_err);
+  {   
     return false; 
   } 
   
