@@ -10,14 +10,15 @@
  */ 
 
 #include "LoRaService.h"
+#include <stdlib.h>
 
-const int RADIOPACKETSIZE = 252;
+const int RADIOPACKETSIZE = 251;
 const int SERIALPACKETSIZE = 260;
 
 //Hardware const start
-int _enable = 7;              // LoRa radio chip select
-int _resetPin = 6;            // LoRa radio reset
-int _interruptPin = 1;        // change for your board; must be a hardware interrupt pin
+int _enable = 10;              // LoRa radio chip select
+int _resetPin = 9;            // LoRa radio reset
+int _interruptPin = 2;        // change for your board; must be a hardware interrupt pin
 
 //Radio Vars
 char DESTID = 0xFF;            // destination to send to
@@ -37,21 +38,6 @@ int _last_packet_rssi;         // Save the last packets rssi
 float _last_packet_snr;        // Save last packets s/n ratio
 long _last_packet_freq_err;    // Records the last packets frequency error in hz (look at documentation)
 
-typedef enum Command
-{
-	INITRD = 2, IDLERD = 3, SLEEPRD = 4, SETRD = 5, SEND = 10, PACKETINFO = 6
-} Command;
-
-typedef enum Status
-{
-	INIT = 0, OKAY = 1, WARNING = 3, ERR = 4
-} Status;
-
-typedef enum Errors
-{
-	no_err = 0, lora_init_err = 1, lora_send_err = 2, lora_receive_err = 3
-}Errors;
-
 
 LoRaServiceClass::LoRaServiceClass() {}
 
@@ -64,52 +50,52 @@ void LoRaServiceClass::setHwPins(int enable_pin, int reset_pin, int interrupt_pi
 
 void LoRaServiceClass::setRadioConfigArr(long freq, int power, int sf, long bw, int crate, long preamble, int sword, bool async )
 {
-	// Should do checks here 
-	_frequency = freq;
-	_tx_power = power;
-	_spreading_factor = sf;
-	_sig_bandwidth = bw;
-	_coding_rate = crate;
-	_lora_preamble = preamble;
-	_sync_word = sword;
-	_async_mode = async;
-	
+  // Should do checks here 
+  _frequency = freq;
+  _tx_power = power;
+  _spreading_factor = sf;
+  _sig_bandwidth = bw;
+  _coding_rate = crate;
+  _lora_preamble = preamble;
+  _sync_word = sword;
+  _async_mode = async;
+  
 }
-int LoRaServiceClass::setRadioConfigArr(char* data, int size)
+bool LoRaServiceClass::setRadioConfigArr(char* data, int size)
 {
-	if( size< 21)
-		return -1;
-	
-	int i =0; 
-	
-	_frequency= data[i++] | (data[i++] << 8) | (data[i++] << 16) | (data[i++] << 24)	;
-	
-	_tx_power = data[i++] | (data[i++] << 8) ;
-	
-	_spreading_factor =  data[i++] | (data[i++] << 8);
-	
-	_sig_bandwidth = data[i++] | (data[i++] << 8) | (data[i++] << 16) | (data[i++] << 24);
-	
-	_coding_rate =  data[i++] | (data[i++] << 8) ;
-	
-	_lora_preamble = data[i++] | (data[i++] << 8) | (data[i++] << 16) | (data[i++] << 24);
-	
-	_sync_word =  data[i++] | (data[i++] << 8) ;
-	
-	_async_mode =  data[i++];
-	
-	return 1;	
+  if( size< 21)
+    return false;
+  
+  int i =0; 
+  
+  _frequency= data[i++] | (data[i++] << 8) | (data[i++] << 16) | (data[i++] << 24)  ;
+  
+  _tx_power = data[i++] | (data[i++] << 8) ;
+  
+  _spreading_factor =  data[i++] | (data[i++] << 8);
+  
+  _sig_bandwidth = data[i++] | (data[i++] << 8) | (data[i++] << 16) | (data[i++] << 24);
+  
+  _coding_rate =  data[i++] | (data[i++] << 8) ;
+  
+  _lora_preamble = data[i++] | (data[i++] << 8) | (data[i++] << 16) | (data[i++] << 24);
+  
+  _sync_word =  data[i++] | (data[i++] << 8) ;
+  
+  _async_mode =  data[i++];
+  
+  return true; 
 }
 
 //Change the destination id 
 void LoRaServiceClass::setDestId(char id)
 {
-	DESTID = id;	
+  DESTID = id;  
 }
 
 void LoRaServiceClass::setHwId(char id)
 {
-	HWID = id;	
+  HWID = id;  
 }
 
 
@@ -118,7 +104,7 @@ void LoRaServiceClass::setHwId(char id)
 /*************************************************************/
 
 
-int LoRaServiceClass::initRadio()
+bool LoRaServiceClass::initRadio()
 {
   LoRa.setPins(_enable, _resetPin, _interruptPin); // configure pinout 
  
@@ -130,109 +116,117 @@ int LoRaServiceClass::initRadio()
   LoRa.setCodingRate4(_coding_rate);
   LoRa.setPreambleLength(_lora_preamble);
   LoRa.setSyncWord(_sync_word);
-  //LoRa.onReceive(onReceive);
   
-
   if (!LoRa.begin(_frequency))
   {           
-    return -1;
+    return false;
   }
   else
   {   //Enter continuous receive mode
-	  LoRa.receive();
-	  return 1;
+    LoRa.receive();
+    return true;
   }
   
 }
 
 /********* TRANSMIT **************/
 //Creates and sends a lora packet, errors are 'handled' and status is updated and send to the serial uplink 
-int LoRaServiceClass::sendLoraPacket(char* data, int data_size)
+bool LoRaServiceClass::sendLoraPacket(char* data, int data_size)
 {
   char lora_packet[RADIOPACKETSIZE] =  {0};  
   int start = 0;
   
-  lora_packet[start++] = DESTID; // Start with dest id 
-  
-  // Make sure the data buffer isn't too large 
-  if(data_size> RADIOPACKETSIZE -1 )
-  {
-	  data_size = RADIOPACKETSIZE - 1; //Set the data size to the packet size so memcpy will truncate the rest of the data buffer
+  if(LoRa.beginPacket()==0)
+  {  
+      sendSerial(WARNING, lora_send_err);
+      return false;
   }
+  
+   // Make sure the data buffer isn't too large
+   if(data_size> RADIOPACKETSIZE)
+   {
+     data_size = RADIOPACKETSIZE; //Set the data size to the packet size so memcpy will truncate the rest of the data buffer
+   }  
+  
+  LoRa.write(DESTID); // Target address 
+  LoRa.write(HWID);   // Sender Address
+  LoRa.write(0);      // Message ID
+  LoRa.write(data_size); // Add payload length  
 
-  // Copy contents from data buffer to the lora packet buffer shifted 1 because of the dest id header
+  // Copy contents from data buffer to the lora packet buffer to ensure full packet with all zeros
   for(int i = 0; i< data_size; i++)
   {
-	  lora_packet[start++] = data[i];
+    lora_packet[start++] = data[i];
   }  
   
-  if(LoRa.beginPacket() == 0)
-  {
-   return -1;    
-  }
-    
+  int sent_bytes=0;
   // write lora_packet buffer to the radio buffer
-  int sent_bytes = LoRa.write((byte *)lora_packet, RADIOPACKETSIZE); 
-
-  if(LoRa.endPacket(_async_mode) == 0)
-  {    
-    return -1; 
+  while(sent_bytes < data_size)
+  {
+   LoRa.write(lora_packet[sent_bytes++]);    
+  }
+  
+  if(LoRa.endPacket()==0)
+  {     
+    sendSerial(WARNING, lora_send_err);
+    return false; 
   } 
   
   //Clear the buffers by idle and re-init 
   LoRa.idle();
   initRadio();
 
-  return sent_bytes; 
+  return true; 
   
 }
 
+
 /***************** Recieve ***************/
 // Forward a message to the serial output from the radio buffer immediately 
-void LoRaServiceClass::onReceive(int packetSize) {
-	if(packetSize<4)          // if there's no packet, return
-	{
-		sendSerial(WARNING, lora_receive_err);
-		LoRa.flush();
-	} 
-	
-	char serial_message[RADIOPACKETSIZE] ={0};  //create the message portion of the serial packet
-	  
-	// Get stats from packet
-	_last_packet_rssi = LoRa.packetRssi(); //rssi
-	_last_packet_snr = LoRa.packetSnr();   //snr
-	_last_packet_freq_err = LoRa.packetFrequencyError();
-	  
-	//First 2 bytes are header info
-	char recipient = LoRa.read();          // recipient address
-	char sender = LoRa.read();            // sender address	   
+void LoRaServiceClass::callReceive(int packetSize) {
+  if(packetSize<4)          // if there's no packet, return
+  {   
+    sendSerial(WARNING, lora_receive_err);
+    LoRa.flush();
+  } 
+  
+  char serial_message[RADIOPACKETSIZE] ={0};  //create the message portion of the serial packet
+    
+  // Get stats from packet
+  _last_packet_rssi = LoRa.packetRssi(); //rssi
+  _last_packet_snr = LoRa.packetSnr();   //snr
+  _last_packet_freq_err = LoRa.packetFrequencyError();
+    
+  //First 2 bytes are header info
+  char recipient = LoRa.read();          // recipient address
+  char sender = LoRa.read();            // sender address    
      
-	//make sure the device ids are correct 
-	if(sender != DESTID || recipient !=HWID)
-	{
-		char ids[2] = {sender,recipient};
-		//Message is not for this device exit
-		sendSerialData(WARNING, lora_receive_err, ids, 2);
-		return;
-	}
-	
-	/* This packet includes the last 2 bytes of the header, 
-	 * the first 2 bytes of the header will include the message ID and 
-	 * message length, the rest is data. 
-	 * the buffer is NOT null terminated.
-	 */
-	//Capture payload
-	while(LoRa.available())
-	{	int sm=0;
-		serial_message[sm++] = LoRa.read();
-	}
+  //make sure the device ids are correct 
+  if(sender != DESTID || recipient !=HWID)
+  {
+    char ids[2] = {sender,recipient};
+    //Message is not for this device exit
+   sendSerialData(WARNING, lora_receive_err, ids, 2);
+    return;
+  }
+  
+  /* This packet includes the last 2 bytes of the header, 
+   * the first 2 bytes of the header will include the message ID and 
+   * message length, the rest is data. 
+   * the buffer is NOT null terminated.
+   */
+  //Capture payload
+  while(LoRa.available())
+  { int sm=0;
+    serial_message[sm++] = LoRa.read();
+  }
 
-	//Write our message to serial immediately 
-	sendSerialData(OKAY, 0, serial_message, RADIOPACKETSIZE);
+  //Write our message to serial immediately 
+  sendSerialData(OKAY, 0, serial_message, RADIOPACKETSIZE);
 
-	//Clear the buffers by idle and re-init 
-	LoRa.idle();
-	initRadio(); 
+  //Clear the buffers by idle and re-init 
+  LoRa.idle();
+  initRadio(); 
   
 }
 
@@ -246,8 +240,8 @@ int LoRaServiceClass::sendSerialData(char header1, char header2, char* data, int
   
    if(data_size>= (SERIALPACKETSIZE - 2) || data_size < 1)
    {
-	   //message is too large to send in a serial packet
-	   return -1;
+     //message is too large to send in a serial packet
+     return 0;
    }
   
   char serial_packet[SERIALPACKETSIZE]={0}; 
@@ -259,7 +253,7 @@ int LoRaServiceClass::sendSerialData(char header1, char header2, char* data, int
   
  for(int i = 0; i<data_size; i++)
  {
-	serial_packet[msg_start++] = data[i];	 
+  serial_packet[msg_start++] = data[i];  
  }
  
   int sent = Serial.write(serial_packet, SERIALPACKETSIZE);//send serial packet
@@ -269,15 +263,14 @@ int LoRaServiceClass::sendSerialData(char header1, char header2, char* data, int
 
 int LoRaServiceClass::sendSerial(char header1, char header2)
 {
-  char serial_packet[2] = {0};  
+  char serial_packet[SERIALPACKETSIZE-2] = {0};  
   int msg_start = 0;
 
   //Insert headers
   serial_packet[msg_start++] = header1;
   serial_packet[msg_start++] = header2;
 
-  // Write the data to the TX Buff
-  int sent = Serial.write(serial_packet, sizeof(serial_packet));
+ int sent = Serial.write(serial_packet, SERIALPACKETSIZE );//send serial packet
  
   // Returns the number of bytes sent
   return sent;
@@ -286,25 +279,25 @@ int LoRaServiceClass::sendSerial(char header1, char header2)
 
 /*************** Recived Serial **************************/
 void LoRaServiceClass::serialEventHandler()
-{       
-	if(Serial.available()<2)
-	{
-		Serial.flush();  // Cant use it, flush serial buffer
-		return;
-	}
-	
-	char instruction = Serial.read();
+{ 
+  if(Serial.available()<2) // Can't use so flush the serial buffer
+  {
+    char left[Serial.available()];
+    Serial.readBytes(left, Serial.available());    
+  }
+  
+  char instruction = Serial.read();
 
  
   // Make sure the buffer wont be too large to stuff it into a radio packet if needed 
   int buff_size;
   if(Serial.available()> RADIOPACKETSIZE || Serial.available()==0)
   {
-	  buff_size = RADIOPACKETSIZE;
+    buff_size = RADIOPACKETSIZE;
   }
   else
   {
-	 buff_size = Serial.available();
+   buff_size = Serial.available();
   }
   
   char data[buff_size]={0};
@@ -313,13 +306,18 @@ void LoRaServiceClass::serialEventHandler()
   
  while(Serial.available())
  {
-	 data[counter++] = Serial.read();	 
+   data[counter++] = Serial.read();  
  }
 
   commandHandler(instruction, data, (buff_size-2));
   
   // Flush the serial buffer when we are done because were not sure if we can use it later 
-  Serial.flush();
+ if(Serial.available()>0)
+ {
+   char left[Serial.available()];
+   Serial.readBytes(left, Serial.available());
+   
+ }
 }
 
 
@@ -328,52 +326,53 @@ void LoRaServiceClass::serialEventHandler()
 /*                   COMMAND SECTION                         */
 /*************************************************************/
 
-int LoRaServiceClass::commandHandler(char instruction, char* data, int data_size)
+bool LoRaServiceClass::commandHandler(char instruction, char* data, int data_size)
 {
     switch(instruction)
-	{		
-		case IDLERD :               // Instruction to idle radio
-		{
-			LoRa.idle();
-			return 1;		
-		}
+  {   
+    case IDLERD :               // Instruction to idle radio
+    {
+      LoRa.idle();
+      return true;   
+    }
     
-		case SLEEPRD :              // Instruction to sleep
-		{
-			LoRa.sleep();
-			return 1;		
-		}
-	
-	   case SETRD :                // Instruction to modify radio
-	   { 
-			// Initialize the radio with new settings			
-			if(setRadioConfigArr(data,data_size) == -1 && initRadio()==-1)            
-			{
-			  sendSerial(ERR, lora_init_err); // There was an init error, return error code  
-			  return -1; 
-			}	
-			return 1;	                    
-		}
-		
-		case SEND :                   // Instructions to send message
-		{
-			if(sendLoraPacket(data, data_size)==-1);
-			{
-			  sendSerial(ERR, lora_send_err);  // There was an error, return error code   
-			  return -1; 
-			}		
-			return 1;	     
-		}
+    case SLEEPRD :              // Instruction to sleep
+    {
+      LoRa.sleep();
+      return true;   
+    }
+  
+     case SETRD :                // Instruction to modify radio
+     { 
+      // Initialize the radio with new settings     
+      if(!setRadioConfigArr(data,data_size) && !initRadio())            
+      {
+        sendSerial(ERR, lora_init_err); // There was an init error, return error code  
+        return false; 
+      } 
+      return true;                     
+    }
     
-		// Send the data back since we couldn't do anything with it 
-		default :
-		{		
-			 sendSerialData(OKAY, no_err, data, data_size);	
-			 return 1;	     
-		}  
-	
-	}
-	return 1;   
+    case SEND :                   // Instructions to send message
+    {
+      if(!sendLoraPacket(data, data_size));
+      {
+        sendSerial(ERR, lora_send_err);  // There was an error, return error code   
+        return false; 
+      }   
+      return true;      
+    }
+    
+    // Send the data back since we couldn't do anything with it 
+    default :
+    {   
+       sendSerialData(OKAY, no_err, data, data_size); 
+       return true;       
+    }  
+  
+  }
+  return true;   
 }
 
 LoRaServiceClass LoRaService;
+
