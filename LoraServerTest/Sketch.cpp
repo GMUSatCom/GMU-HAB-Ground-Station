@@ -1,37 +1,43 @@
-﻿
-#include "LoRaService.h"
+﻿/*
+ * RadioServer.cpp
+ *
+ * Created: 10/10/2019 6:24:09 PM
+ * Author : Vaughn Nugent 
+ * Base sketch to operate the service lib 
+ */ 
 
-void onReceive(int packetSize)
-{
-	LoRaService.callReceive(packetSize);
-}
+#include <Arduino.h>
+//#include "LoRaService.h"
 
-void setup() {
 
-	Serial.begin(115200);
-	while(!Serial);
-
+void setup(){
+	
 	pinMode(13, OUTPUT);
-
-	if(!LoRaService.initRadio())
-	{
-		LoRaService.sendSerial('3','1');
-	}
-	LoRaService.sendSerial('2','0');
-	LoRa.onReceive(onReceive);
-
+	
+	//Serial.begin(9600);
+	//while(!Serial);
+	
+	
+	//if(LoRaService.initRadio()==-1)
+    //{
+		//LoRaService.sendSerial('3','1');
+	//}
+	//
 }
 
-void loop() {
 
-
-	if (Serial.available()) {
-		LoRaService.serialEventHandler();
-		delayMicroseconds(10);
-	}
-
-	analogWrite(13, 255);
+void loop(){
+	
+	//if (Serial.available()) {
+		////LoRaService.serialEventHandler();	
+		//delayMicroseconds(10);	
+	//}		
+	
+	
 	delay(200);
 	analogWrite(13,0);
 	delay(200);
+	analogWrite(13,255);	 
+
 }
+
