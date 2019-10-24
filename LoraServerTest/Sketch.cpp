@@ -1,5 +1,4 @@
-﻿
-#include "LoRaService.h"
+﻿#include "LoRaService.h"
 
 /*
  * Sketch.cpp

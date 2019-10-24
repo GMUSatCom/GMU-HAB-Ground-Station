@@ -65,26 +65,26 @@ void LoRaServiceClass::setRadioConfigArr(long freq, int power, int sf, long bw, 
 }
 bool LoRaServiceClass::setRadioConfigArr(char* data, int size)
 {
-  if( size< 21)
+  if( size< 20)
     return false;
   
   int i =0; 
   
-  _frequency= data[i++] | (data[i++] << 8) | (data[i++] << 16) | (data[i++] << 24)  ;
+  _frequency= data[i] | (data[i+1] << 8) | (data[i+2] << 16) | (data[i+3] << 24)  ;
   
-  _tx_power = data[i++] | (data[i++] << 8) ;
+  _tx_power = data[i+4] | (data[i+5] << 8) ;
   
-  _spreading_factor =  data[i++] | (data[i++] << 8);
+  _spreading_factor =  data[i+6] | (data[i+7] << 8);
   
-  _sig_bandwidth = data[i++] | (data[i++] << 8) | (data[i++] << 16) | (data[i++] << 24);
+  _sig_bandwidth = data[i+8] | (data[i+9] << 8) | (data[i+10] << 16) | (data[i+11] << 24);
   
-  _coding_rate =  data[i++] | (data[i++] << 8) ;
+  _coding_rate =  data[i+12] | (data[i+13] << 8) ;
   
-  _lora_preamble = data[i++] | (data[i++] << 8) | (data[i++] << 16) | (data[i++] << 24);
+  _lora_preamble = data[i+14] | (data[i+15] << 8) | (data[i+16] << 16) | (data[i+17] << 24);
   
-  _sync_word =  data[i++] | (data[i++] << 8) ;
+  _sync_word =  data[i+18] | (data[i+19] << 8) ;
   
-  _async_mode =  data[i++];
+  _async_mode =  data[i+20];
   
   return true; 
 }
@@ -104,7 +104,6 @@ void LoRaServiceClass::setHwId(char id)
 /*************************************************************/
 /*                    RADIO SECTION                          */
 /*************************************************************/
-
 
 bool LoRaServiceClass::initRadio()
 {
@@ -156,7 +155,6 @@ bool LoRaServiceClass::sendLoraPacket(char* data, int data_size)
   {
 	  LoRa.beginPacket();
   }
- 
   
    // Make sure the data buffer isn't too large
    if(data_size> RADIOPAYLOADSIZE)
@@ -192,8 +190,7 @@ bool LoRaServiceClass::sendLoraPacket(char* data, int data_size)
   }  
 
   sendSerial(OKAY, no_err);
-  return true; 
-  
+  return true;   
 }
 
 
@@ -329,7 +326,7 @@ void LoRaServiceClass::serialEventHandler()
    data[counter++] = Serial.read();  
  }
 
-	// Call the handler to run commands 
+  // Call the handler to run commands 
   commandHandler(instruction, data, (buff_size-2));
   
   // Flush the serial buffer when we are done because were not sure if we can use it later 
