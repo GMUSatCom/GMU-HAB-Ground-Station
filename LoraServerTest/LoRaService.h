@@ -88,7 +88,6 @@ public:
   //Forwards a message to the serial output from the radio buffer immediately
   void callReceive(int packetSize);
 
-
 private:
 
   //Is called from serialEventHandler and will handle a given command and various other functions necessary to complete the command

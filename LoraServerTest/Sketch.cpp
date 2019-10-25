@@ -10,27 +10,34 @@
  * and serial communications. 
  */
 
-const int BAUDRATE = 115200;
+const long BAUDRATE = 115200;
 const int SERIALDELAY = 20; // MS to delay the serial event check
 
-void setup() {
+void setup() 
+{
 
 	//Begin Serial
 	Serial.begin(BAUDRATE);
 	while(!Serial);
 
-
-	// Start the radio 
+	// Start the radio
 	if(!LoRaService.initRadio())
 	{
+		pinMode(13,OUTPUT);
 		LoRaService.sendSerial(LoRaService.ERR, LoRaService.lora_init_err);
-		while(1); // Failed, do nothing 
+		while(1) // Failed, do nothing
+		{
+			analogWrite(13,255);
+			delay(200);
+			analogWrite(13,255);
+			delay(200);
+			
+		}
 	}
 	LoRaService.sendSerial(LoRaService.OKAY, LoRaService.no_err);
-		
+	
 	//Submit the callback function for radio handler
 	LoRa.onReceive(onReceive);
-
 }
 
 void loop() {

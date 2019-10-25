@@ -11,7 +11,7 @@
 
 #include "LoRaService.h"
 
-const int RADIOPAYLOADSIZE = 251;
+const int RADIOPAYLOADSIZE = 252;
 const int SERIALPACKETSIZE = 260;
 
 //Hardware const start
@@ -23,7 +23,7 @@ int _interruptPin = 2;         // change for your board; must be a hardware inte
 char DESTID = 0xFF;            // destination to send to
 char HWID   = 0xFF;            // This device ID
 
-bool _implicit_header = true;  // Set header mode
+bool _implicit_header = false; // Set header mode
 int _send_timeout = 10;        // Timeout on async send
 int _async_delay = 20;         // Delay to retry sending
 long _frequency = 915E6;       // Set Operating frequency
@@ -33,7 +33,7 @@ long _sig_bandwidth = 15.6E3;  // Signal Bandwidth
 int _coding_rate = 8;          // Coding Rate denominator
 long _lora_preamble = 10;      // Set lora radio preamble length
 int _sync_word = 0x12;         // Lora Sync Word
-bool _async_mode = true;       // Packet send in async mode
+bool _async_mode = false;      // Packet send in async mode
 
 //Captured Packet info
 int _last_packet_rssi;         // Save the last packets rssi
@@ -110,13 +110,13 @@ bool LoRaServiceClass::initRadio()
   LoRa.setPins(_enable, _resetPin, _interruptPin); // configure pinout 
  
  // Set LoRa values based on the globals configured above
-  LoRa.setTxPower(_tx_power);
-  LoRa.setFrequency(_frequency);
-  LoRa.setSpreadingFactor(_spreading_factor);
-  LoRa.setSignalBandwidth(_sig_bandwidth);
-  LoRa.setCodingRate4(_coding_rate);
-  LoRa.setPreambleLength(_lora_preamble);
-  LoRa.setSyncWord(_sync_word);
+  //LoRa.setTxPower(_tx_power);
+  //LoRa.setFrequency(_frequency);
+  //LoRa.setSpreadingFactor(_spreading_factor);
+  //LoRa.setSignalBandwidth(_sig_bandwidth);
+  //LoRa.setCodingRate4(_coding_rate);
+  //LoRa.setPreambleLength(_lora_preamble);
+  //LoRa.setSyncWord(_sync_word);
   
   if (!LoRa.begin(_frequency))
   {           
@@ -134,27 +134,21 @@ bool LoRaServiceClass::initRadio()
 //Creates and sends a lora packet, errors are 'handled' and status is updated and send to the serial uplink 
 bool LoRaServiceClass::sendLoraPacket(char* data, int data_size)
 {
-  char lora_packet[RADIOPAYLOADSIZE] =  {0};  
-  int start = 0;
-  int tm_count = 0;
+    char lora_packet[RADIOPAYLOADSIZE] =  {0};  
+    int start = 0;
+    int tm_count = 0;
+    
+    // wait until the radio is ready to send a packet 
+   while (LoRa.beginPacket(_implicit_header) == 0)
+   {
+     if(tm_count >= _send_timeout)
+     {
+  	   sendSerial(ERR, send_timeout_err);
+  	   return false;
+     }		   
+     delay(_async_delay); tm_count++;
+   }	   
   
-  // wait until the radio is ready to send a packet (non blocking mode)
-  if(_async_mode)
-  {
-	   while (LoRa.beginPacket(_implicit_header) == 0 || tm_count >= _send_timeout)
-	   {
-		   if(tm_count >= _send_timeout)
-		   {
-			   sendSerial(ERR, send_timeout_err);
-			   return false;
-		   }		   
-		   delay(20); tm_count++;
-	   }	   
-  }
-  else
-  {
-	  LoRa.beginPacket();
-  }
   
    // Make sure the data buffer isn't too large
    if(data_size> RADIOPAYLOADSIZE)
@@ -168,7 +162,7 @@ bool LoRaServiceClass::sendLoraPacket(char* data, int data_size)
 	  LoRa.write(DESTID);    // Target address
 	  LoRa.write(HWID);      // Sender Address
 	  LoRa.write(0);         // Message ID
-	  LoRa.write(data_size); // Add payload length
+	  LoRa.write(data_size+3); // Add payload length
   }  
 
   // Copy contents from data buffer to the lora packet buffer to ensure full packet with all zeros
@@ -186,10 +180,13 @@ bool LoRaServiceClass::sendLoraPacket(char* data, int data_size)
   
   if(LoRa.endPacket(_async_mode) == 0)
   {       
+    sendSerial(ERR, lora_send_err);
     return false; 
   }  
 
   sendSerial(OKAY, no_err);
+  LoRa.idle();
+  initRadio();
   return true;   
 }
 
@@ -225,17 +222,12 @@ void LoRaServiceClass::callReceive(int packetSize)
 	//Message is not for this device exit
 	char ids[2] = {sender,recipient};    
 	sendSerialData(WARNING, lora_receive_err, ids, 2);
+	LoRa.idle();
+	initRadio();
 	return;
-  }
-  
-  //Message lengths don't match
-  if(packetSize != msg_length)
-  {
-	char pkt[4] = {sender,recipient, packetSize, msg_length};	
-	sendSerialData(WARNING, lora_receive_err, pkt, 4);  
-  }
-  
-    // Capture payload. The buffer is NOT null terminated.  
+  }  
+   
+  // Capture payload. The buffer is NOT null terminated.  
   
   while(LoRa.available())
   { 
@@ -244,6 +236,9 @@ void LoRaServiceClass::callReceive(int packetSize)
 
   //Write our message to serial immediately 
   sendSerialData(OKAY, size, serial_message, RADIOPAYLOADSIZE); 
+  LoRa.idle();
+  initRadio();
+  
 }
 
 
