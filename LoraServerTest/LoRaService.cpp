@@ -162,7 +162,7 @@ bool LoRaServiceClass::sendLoraPacket(char* data, int data_size)
 	  LoRa.write(DESTID);    // Target address
 	  LoRa.write(HWID);      // Sender Address
 	  LoRa.write(0);         // Message ID
-	  LoRa.write(data_size+3); // Add payload length
+	  LoRa.write(data_size); // Add payload length
   }  
 
   // Copy contents from data buffer to the lora packet buffer to ensure full packet with all zeros
@@ -212,9 +212,8 @@ void LoRaServiceClass::callReceive(int packetSize)
     	
   //First 4 bytes are header info
   char recipient = LoRa.read();          // recipient address
-  char sender = LoRa.read();             // sender address    
-  char msg_id = LoRa.read();             // Message id (implicit header mode)
-  char msg_length = LoRa.read();         // Message length (implicit header mode)
+  char sender = LoRa.read();             // sender address   
+  //Just passing the message id and size to serial   
      
   //make sure the device ids are correct 
   if(sender != DESTID || recipient !=HWID)
@@ -222,6 +221,7 @@ void LoRaServiceClass::callReceive(int packetSize)
 	//Message is not for this device exit
 	char ids[2] = {sender,recipient};    
 	sendSerialData(WARNING, lora_receive_err, ids, 2);
+	//Toggle idle to clear buffers
 	LoRa.idle();
 	initRadio();
 	return;
@@ -231,11 +231,17 @@ void LoRaServiceClass::callReceive(int packetSize)
   
   while(LoRa.available())
   { 
+	  if(size==RADIOPAYLOADSIZE)
+		{
+			break; //will index a null array if payload is too large so break here 		
+		}
+		
     serial_message[size++] = LoRa.read();
   }
 
   //Write our message to serial immediately 
   sendSerialData(OKAY, size, serial_message, RADIOPAYLOADSIZE); 
+  //Toggle idle to clear buffers
   LoRa.idle();
   initRadio();
   
