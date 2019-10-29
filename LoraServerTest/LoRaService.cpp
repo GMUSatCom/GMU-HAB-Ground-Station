@@ -130,6 +130,21 @@ bool LoRaServiceClass::initRadio()
   
 }
 
+int LoRaServiceClass::getRssi()
+{
+	return _last_packet_rssi;
+}
+
+float LoRaServiceClass::getSnr()
+{
+	return _last_packet_snr;
+}
+long LoRaServiceClass::getFreqErr()
+{
+	return _last_packet_freq_err;
+}
+
+
 /********* TRANSMIT **************/
 //Creates and sends a lora packet, errors are 'handled' and status is updated and send to the serial uplink 
 bool LoRaServiceClass::sendLoraPacket(char* data, int data_size)

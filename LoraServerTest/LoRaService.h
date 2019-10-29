@@ -87,6 +87,18 @@ public:
   // Handles callback from radio interrupt
   //Forwards a message to the serial output from the radio buffer immediately
   void callReceive(int packetSize);
+  
+  // Returns last packet rssi
+  int getRssi();
+  
+  // Returns last packet snr
+  float getSnr();
+  
+  //Returns last packet frequency error value
+  long getFreqErr();
+  
+  
+
 
 private:
 
