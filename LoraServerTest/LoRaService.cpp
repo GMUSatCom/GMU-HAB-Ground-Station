@@ -1,47 +1,25 @@
 /*
- * LoRaService.cpp
+ * LoRaService.h
  *
- * Created: 10/11/2019 10:54:14 PM
- * Author : Vaughn Nugent
+ * Created: 10/12/2019 1:40:09 AM
+ * Author: Vaughn Nugent
  * Description: Program to configure and communicate with a LoRa radio, using the Sandeepmistry library for Arduino.
- * this package relies on, and is compiled with the standard Arduino 1.8 Libraries for the ATMEGA2560 (Ardunio Mega)
- * this package expects you to modify your hardware serial TX and RX buffers to match the size of the Serial packet 
- * size for best stability, performance and efficiency.
- */ 
-
+ * This package relies on, and is compiled with the standard Arduino 1.8 Libraries for the ATMEGA2560 (Ardunio Mega)
+ * Ideally you should increase the size of your serial buffers to match the serial packet size, but the latest version
+ * of the RadioManager software will work with stock hardware serial buffers size for best stability, performance and efficiency.
+ */
 #include "LoRaService.h"
-
-const int RADIOPAYLOADSIZE = 252;
-const int SERIALPACKETSIZE = 260;
-
-//Hardware const start
-int _enable = 10;              // LoRa radio chip select
-int _resetPin = 9;             // LoRa radio reset
-int _interruptPin = 2;         // change for your board; must be a hardware interrupt pin
-
-//Radio Vars
-char DESTID = 0xFF;            // destination to send to
-char HWID   = 0xFF;            // This device ID
-
-bool _implicit_header = false; // Set header mode
-int _send_timeout = 10;        // Timeout on async send
-int _async_delay = 20;         // Delay to retry sending
-long _frequency = 915E6;       // Set Operating frequency
-int _tx_power = 23;            // Transmit Power level
-int _spreading_factor = 12;    // Spreading Factor
-long _sig_bandwidth = 15.6E3;  // Signal Bandwidth
-int _coding_rate = 8;          // Coding Rate denominator
-long _lora_preamble = 10;      // Set lora radio preamble length
-int _sync_word = 0x12;         // Lora Sync Word
-bool _async_mode = false;      // Packet send in async mode
 
 //Captured Packet info
 int _last_packet_rssi;         // Save the last packets rssi
 float _last_packet_snr;        // Save last packets s/n ratio
 long _last_packet_freq_err;    // Records the last packets frequency error in hz (look at documentation)
 
-
-LoRaServiceClass::LoRaServiceClass() {}
+LoRaServiceClass::LoRaServiceClass() 
+{
+  //Submit callback funtion when class object is constructed
+   LoRa.onReceive(Receive);
+}
 
 void LoRaServiceClass::setHwPins(int enable_pin, int reset_pin, int interrupt_pin )
 {
@@ -100,7 +78,6 @@ void LoRaServiceClass::setHwId(char id)
   HWID = id;  
 }
 
-
 /*************************************************************/
 /*                    RADIO SECTION                          */
 /*************************************************************/
@@ -109,25 +86,19 @@ bool LoRaServiceClass::initRadio()
 {
   LoRa.setPins(_enable, _resetPin, _interruptPin); // configure pinout 
  
- // Set LoRa values based on the globals configured above
-  //LoRa.setTxPower(_tx_power);
-  //LoRa.setFrequency(_frequency);
-  //LoRa.setSpreadingFactor(_spreading_factor);
-  //LoRa.setSignalBandwidth(_sig_bandwidth);
-  //LoRa.setCodingRate4(_coding_rate);
-  //LoRa.setPreambleLength(_lora_preamble);
-  //LoRa.setSyncWord(_sync_word);
-  
   if (!LoRa.begin(_frequency))
   {           
     return false;
   }
   else
-  {   //Enter continuous receive mode
+  {   	
+	// Set LoRa values based on the globals configured above
+	  LoRa.setTxPower(_tx_power);
+	  LoRa.setFrequency(_frequency);
+	  //Enter continuous receive mode
     LoRa.receive();
     return true;
-  }
-  
+  }  
 }
 
 int LoRaServiceClass::getRssi()
@@ -143,7 +114,6 @@ long LoRaServiceClass::getFreqErr()
 {
 	return _last_packet_freq_err;
 }
-
 
 /********* TRANSMIT **************/
 //Creates and sends a lora packet, errors are 'handled' and status is updated and send to the serial uplink 
@@ -205,7 +175,6 @@ bool LoRaServiceClass::sendLoraPacket(char* data, int data_size)
   return true;   
 }
 
-
 /***************** Receive ***************/
 // Forward a message to the serial output from the radio buffer immediately 
 void LoRaServiceClass::callReceive(int packetSize) 
@@ -228,18 +197,20 @@ void LoRaServiceClass::callReceive(int packetSize)
   //First 4 bytes are header info
   char recipient = LoRa.read();          // recipient address
   char sender = LoRa.read();             // sender address   
+  char uk1 = LoRa.read();
+  char uk2 = LoRa.read();
   //Just passing the message id and size to serial   
      
   //make sure the device ids are correct 
   if(sender != DESTID || recipient !=HWID)
   {
-	//Message is not for this device exit
-	char ids[2] = {sender,recipient};    
-	sendSerialData(WARNING, lora_receive_err, ids, 2);
-	//Toggle idle to clear buffers
-	LoRa.idle();
-	initRadio();
-	return;
+  	//Message is not for this device exit
+	  char ids[2] = {sender,recipient};    
+	  sendSerialData(WARNING, lora_receive_err, ids, 2);
+	  //Toggle idle to clear buffers
+	  LoRa.idle();
+	  initRadio();
+	  return;
   }  
    
   // Capture payload. The buffer is NOT null terminated.  
@@ -258,15 +229,12 @@ void LoRaServiceClass::callReceive(int packetSize)
   sendSerialData(OKAY, size, serial_message, RADIOPAYLOADSIZE); 
   //Toggle idle to clear buffers
   LoRa.idle();
-  initRadio();
-  
+  initRadio();  
 }
-
 
 /*************************************************************/
 /*                    SERIAL SECTION                         */
 /*************************************************************/
-
 int LoRaServiceClass::sendSerialData(char header1, char header2, char* data, int data_size)
 {
   
@@ -306,8 +274,7 @@ int LoRaServiceClass::sendSerial(char header1, char header2)
  int sent = Serial.write(serial_packet, SERIALPACKETSIZE );//send serial packet
  
   // Returns the number of bytes sent
-  return sent;
-  
+  return sent;  
 }
 
 /*************** Received Serial **************************/
@@ -362,17 +329,31 @@ bool LoRaServiceClass::commandHandler(char instruction, char* data, int data_siz
 {
     switch(instruction)
   {   
+    case INITRD :
+    {
+       if(initRadio())
+       {
+          sendSerial(OKAY, no_err);
+          return true;
+       }
+       else
+       {
+          sendSerial(ERR, lora_init_err);
+          return false;
+       }
+    }
+    
     case IDLERD :               // Instruction to idle radio
     {
       LoRa.idle();
-	  sendSerial(OKAY, no_err); // To acknowledge the command was run successfully
+	    sendSerial(OKAY, no_err); // To acknowledge the command was run successfully
       return true;   
     }
     
     case SLEEPRD :              // Instruction to sleep
     {
       LoRa.sleep();
-	  sendSerial(OKAY, no_err); // To acknowledge the command was run successfully
+	    sendSerial(OKAY, no_err); // To acknowledge the command was run successfully
       return true;   
     }
   
@@ -384,7 +365,7 @@ bool LoRaServiceClass::commandHandler(char instruction, char* data, int data_siz
         sendSerial(ERR, lora_init_err); // There was an init error, return error code  
         return false; 
       } 
-	  sendSerial(OKAY, no_err); // To acknowledge the command was run successfully
+	    sendSerial(OKAY, no_err); // To acknowledge the command was run successfully
       return true;                     
     }
     
@@ -407,7 +388,7 @@ bool LoRaServiceClass::commandHandler(char instruction, char* data, int data_siz
 LoRaServiceClass LoRaService;
 
 //Function out of class to allow for static callback
-void onReceive(int packetSize)
+void Receive(int packetSize)
 {
 	LoRaService.callReceive(packetSize);
 }
