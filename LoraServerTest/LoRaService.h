@@ -21,16 +21,11 @@
 #include <Arduino.h>
 #include <LoRa.h>
 
-//Set the Radio Payload Packet Size
-#define RADIOPAYLOADSIZE 252
-//Set the device serial uplink packet size (Must match RadioManager software at 260 bytes)
-#define SERIALPACKETSIZE 260
-//Define the reccomended baud rate
-#define REC_BAUD 115200
-//Setup Serial Macro to allow for management of serial
-#define BEGINSERIAL Serial.begin(REC_BAUD);
-//Serial event handler Macro
-#define SERIALEVENT void serialEvent(){LoRaService.serialEventHandler();}
+#define RADIOPAYLOADSIZE 252 //Set the Radio Payload Packet Size
+#define SERIALPACKETSIZE 260 //Set the device serial uplink packet size (Must match RadioManager software at 260 bytes)
+#define REC_BAUD 115200      //Define the reccomended baud rate
+#define BEGINSERIAL Serial.begin(REC_BAUD); //Setup Serial Macro
+#define SERIALEVENT void serialEvent(){LoRaService.serialEventHandler();} //Serial event handler Macro
 
 
 class LoRaServiceClass {

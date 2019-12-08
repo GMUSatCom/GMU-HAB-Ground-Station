@@ -129,6 +129,8 @@ bool LoRaServiceClass::sendLoraPacket(char* data, int data_size)
      if(tm_count >= _send_timeout)
      {
   	   sendSerial(ERR, send_timeout_err);
+      LoRa.idle();
+      LoRa.receive();
   	   return false;
      }		   
      delay(_async_delay); tm_count++;
@@ -166,12 +168,14 @@ bool LoRaServiceClass::sendLoraPacket(char* data, int data_size)
   if(LoRa.endPacket(_async_mode) == 0)
   {       
     sendSerial(ERR, lora_send_err);
+    LoRa.idle();
+    LoRa.receive();
     return false; 
   }  
 
   sendSerial(OKAY, no_err);
   LoRa.idle();
-  initRadio();
+  LoRa.receive();
   return true;   
 }
 
@@ -208,8 +212,8 @@ void LoRaServiceClass::callReceive(int packetSize)
 	  char ids[2] = {sender,recipient};    
 	  sendSerialData(WARNING, lora_receive_err, ids, 2);
 	  //Toggle idle to clear buffers
-	  LoRa.idle();
-	  initRadio();
+    LoRa.idle();
+    LoRa.receive();
 	  return;
   }  
    
@@ -229,7 +233,7 @@ void LoRaServiceClass::callReceive(int packetSize)
   sendSerialData(OKAY, size, serial_message, RADIOPAYLOADSIZE); 
   //Toggle idle to clear buffers
   LoRa.idle();
-  initRadio();  
+  LoRa.receive();  
 }
 
 /*************************************************************/
@@ -257,7 +261,6 @@ int LoRaServiceClass::sendSerialData(char header1, char header2, char* data, int
  } 
   //send serial packet
   int sent = Serial.write(serial_packet, SERIALPACKETSIZE);
-
   return sent;
 }
 

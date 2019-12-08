@@ -3,21 +3,19 @@
  *
  * Created: 10/20/2019 2:59:19 PM
  * Author: Vaughn Nugent
- * 
+ * Version 1.0.2
  * Example sketch for using the LoRaServiceClass to manage the RFM95 radio
  * and serial communications. 
  */
 
 #include "LoRaService.h"
-//If you do not wish to use the LCD display, just comment out the header file
-#include "LiquidCrystal_I2C.h"
+#include "LiquidCrystal_I2C.h" //If you do not wish to use the LCD display, just comment out the header file
 
 #ifdef FDB_LIQUID_CRYSTAL_I2C_H
-//LCD Object Constructor
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+LiquidCrystal_I2C lcd(0x27, 16, 2);//LCD Object Constructor
 #endif
 
-#define SERIALDELAY 20 // MS to delay the serial event check
+#define SERIALDELAY 5 // MS to delay the serial event check
 
 //LCD Display vars
 int cur_rssi = 0;
@@ -49,11 +47,12 @@ BEGINSERIAL;
     lcd.setCursor(0, 1); // bottom left
     lcd.print("Failed, Check!");
 #endif
-    while(1) // Failed to init radio, run loop 
+
+    while(1) // Failed, do nothing
     {      
       analogWrite(13,255);
       delay(200);
-      analogWrite(13,255);
+      analogWrite(13,0);
       delay(200);      
     }
   }
@@ -82,7 +81,8 @@ void loop() {
 SERIALEVENT;
 
 //Code to handle updating the LCD Display
-void setScreen() {
+void setScreen() 
+{
   //If we have updated values for rssi/snr/freq_err then update the display
   //Otherwise leave the display alone
   if (cur_rssi != LoRaService.getRssi() || cur_snr != LoRaService.getSnr() || cur_frqerr != LoRaService.getFreqErr()){
